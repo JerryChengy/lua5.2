@@ -668,9 +668,9 @@ static int gmatch_aux (lua_State *L) {
 static int gmatch (lua_State *L) {
   luaL_checkstring(L, 1);
   luaL_checkstring(L, 2);
-  lua_settop(L, 2);
+  lua_settop(L, 2);//将top位置向上挪2个，是为了跨开上面2个string
   lua_pushinteger(L, 0);
-  lua_pushcclosure(L, gmatch_aux, 3);
+  lua_pushcclosure(L, gmatch_aux, 3);//3个upvals
   return 1;
 }
 

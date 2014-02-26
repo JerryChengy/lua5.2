@@ -158,9 +158,9 @@ struct lua_State {
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   const Instruction *oldpc;  /* last pc traced */
-  StkId stack_last;  /* last free slot in the stack */
-  StkId stack;  /* stack base */
-  int stacksize;
+  StkId stack_last;  /* last free slot in the stack *///后面紧跟EXTRA_STACK
+  StkId stack;  /* stack base *///第一个栈数据
+  int stacksize;//包括EXTRA_STACK
   unsigned short nny;  /* number of non-yieldable calls in stack */
   unsigned short nCcalls;  /* number of nested C calls */
   lu_byte hookmask;

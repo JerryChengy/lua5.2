@@ -4,7 +4,7 @@
 ** See Copyright Notice in lua.h
 */
 
-
+//函数的调用及返回放在本文件中
 #include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
@@ -142,13 +142,14 @@ int luaD_rawrunprotected (lua_State *L, Pfunc f, void *ud) {
 static void correctstack (lua_State *L, TValue *oldstack) {
   CallInfo *ci;
   GCObject *up;
-  L->top = (L->top - oldstack) + L->stack;
+  L->top = (L->top - oldstack) + L->stack;//调整栈顶的位置，相对于栈底位置不变
   for (up = L->openupval; up != NULL; up = up->gch.next)
-    gco2uv(up)->v = (gco2uv(up)->v - oldstack) + L->stack;
+    gco2uv(up)->v = (gco2uv(up)->v - oldstack) + L->stack;//调整上值的位置，相对于栈底位置不变
   for (ci = L->ci; ci != NULL; ci = ci->previous) {
+	  //调整各层调用栈顶和函数指针的位置
     ci->top = (ci->top - oldstack) + L->stack;
     ci->func = (ci->func - oldstack) + L->stack;
-    if (isLua(ci))
+    if (isLua(ci))//lua函数有栈底，下面调整它的位置
       ci->u.l.base = (ci->u.l.base - oldstack) + L->stack;
   }
 }
@@ -253,7 +254,7 @@ static void callhook (lua_State *L, CallInfo *ci) {
   ci->u.l.savedpc--;  /* correct 'pc' */
 }
 
-
+//actual;固定参数个数+可变参数个数，可变参数排在固定参数后面
 static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
   int i;
   int nfixargs = p->numparams;
@@ -263,6 +264,9 @@ static StkId adjust_varargs (lua_State *L, Proto *p, int actual) {
   luaD_checkstack(L, p->maxstacksize);  /* check again for new 'base' */
   fixed = L->top - actual;  /* first fixed argument */
   base = L->top;  /* final position of first argument */
+  //把固定参数挪到base后面，将原来固定参数占的位置置为nil 
+  //base指向第一个固定参数
+  //base前面是可变参数
   for (i=0; i<nfixargs; i++) {
     setobjs2s(L, L->top++, fixed + i);
     setnilvalue(fixed + i);
@@ -325,16 +329,17 @@ int luaD_precall (lua_State *L, StkId func, int nresults) {
     case LUA_TLCL: {  /* Lua function: prepare its call */
       StkId base;
       Proto *p = clLvalue(func)->p;
-      n = cast_int(L->top - func) - 1;  /* number of real arguments */
+      n = cast_int(L->top - func) - 1;  /* number of real arguments *///n: 调用者实际压入的参数个数
       luaD_checkstack(L, p->maxstacksize);
       for (; n < p->numparams; n++)
         setnilvalue(L->top++);  /* complete missing arguments */
-      if (!p->is_vararg) {
+      if (!p->is_vararg) {//无可变参数的lua调用
         func = restorestack(L, funcr);
         base = func + 1;
       }
       else {
         base = adjust_varargs(L, p, n);
+		//base指向
         func = restorestack(L, funcr);  /* previous call can change stack */
       }
       ci = next_ci(L);  /* now 'enter' new function */

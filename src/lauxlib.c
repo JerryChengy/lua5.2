@@ -847,13 +847,14 @@ LUALIB_API void luaL_openlib (lua_State *L, const char *libname,
 */
 LUALIB_API void luaL_setfuncs (lua_State *L, const luaL_Reg *l, int nup) {
   luaL_checkversion(L);
-  luaL_checkstack(L, nup, "too many upvalues");
+  luaL_checkstack(L, nup, "too many upvalues");//stack_last-top>nup时不用重新分配
   for (; l->name != NULL; l++) {  /* fill the table with given functions */
     int i;
     for (i = 0; i < nup; i++)  /* copy upvalues to the top */
+		//把上值拷贝到top上面,top也往上移动
       lua_pushvalue(L, -nup);
     lua_pushcclosure(L, l->func, nup);  /* closure with those upvalues */
-    lua_setfield(L, -(nup + 2), l->name);
+    lua_setfield(L, -(nup + 2), l->name);//t[l->name]=l->func
   }
   lua_pop(L, nup);  /* remove upvalues */
 }

@@ -41,6 +41,7 @@ const char lua_ident[] =
 #define isvalid(o)	((o) != luaO_nilobject)
 
 /* test for pseudo index */
+//L->ci->func+i, L->top-i
 #define ispseudo(i)		((i) <= LUA_REGISTRYINDEX)//V5.1: (i) <= -10000
 
 /* test for valid but not pseudo index */
@@ -54,9 +55,9 @@ const char lua_ident[] =
 
 static TValue *index2addr (lua_State *L, int idx) {
   CallInfo *ci = L->ci;
-  if (idx > 0) {//当调用本接口时，ci->func是不被上层所需要的，故idx永远!=0
+  if (idx > 0) {//当调用本接口时，ci->func是不被调用者所需要的，故idx永远!=0
     TValue *o = ci->func + idx;
-    api_check(L, idx <= ci->top - (ci->func + 1), "unacceptable index");
+    api_check(L, idx <= ci->top - (ci->func + 1), "unacceptable index");//ci->top是不被调用者所需要的
     if (o >= L->top) return NONVALIDVALUE;
     else return o;
   }
@@ -91,7 +92,7 @@ static void growstack (lua_State *L, void *ud) {
   luaD_growstack(L, size);
 }
 
-
+//size: 新增大小
 LUA_API int lua_checkstack (lua_State *L, int size) {
   int res;
   CallInfo *ci = L->ci;
@@ -99,14 +100,14 @@ LUA_API int lua_checkstack (lua_State *L, int size) {
   if (L->stack_last - L->top > size)  /* stack large enough? */
     res = 1;  /* yes; check is OK */
   else {  /* no; need to grow stack */
-    int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;
+    int inuse = cast_int(L->top - L->stack) + EXTRA_STACK;//目前的总大小
     if (inuse > LUAI_MAXSTACK - size)  /* can grow without overflow? */
       res = 0;  /* no */
     else  /* try to grow stack */
       res = (luaD_rawrunprotected(L, &growstack, &size) == LUA_OK);
   }
   if (res && ci->top < L->top + size)
-    ci->top = L->top + size;  /* adjust frame top */
+    ci->top = L->top + size;  /* adjust frame top *///一般在外面会把L->top挪到ci->top位置上
   lua_unlock(L);
   return res;
 }
@@ -164,7 +165,7 @@ LUA_API int lua_gettop (lua_State *L) {
   return cast_int(L->top - (L->ci->func + 1));
 }
 
-
+//挪top的位置，不能超过stack_last，也不能低于L->ci->func
 LUA_API void lua_settop (lua_State *L, int idx) {
   StkId func = L->ci->func;
   lua_lock(L);
@@ -555,21 +556,24 @@ LUA_API const char *lua_pushfstring (lua_State *L, const char *fmt, ...) {
 }
 
 
+//把top前n个值作为上值赋给cl->c.upvalue
 LUA_API void lua_pushcclosure (lua_State *L, lua_CFunction fn, int n) {
   lua_lock(L);
-  if (n == 0) {
+  if (n == 0) {//没有上值就被认为是light c function
     setfvalue(L->top, fn);
   }
-  else {
+  else {//有上值就被认为是cClosure
     Closure *cl;
     api_checknelems(L, n);
-    api_check(L, n <= MAXUPVAL, "upvalue index too large");
+    api_check(L, n <= MAXUPVAL, "upvalue index too large");//上值的最大个数是256
     luaC_checkGC(L);
     cl = luaF_newCclosure(L, n);
     cl->c.f = fn;
     L->top -= n;
+	//把上值复制到cl中
     while (n--)
       setobj2n(L, &cl->c.upvalue[n], L->top + n);
+	//将cl压入栈顶
     setclCvalue(L, L->top, cl);
   }
   api_incr_top(L);
@@ -608,6 +612,7 @@ LUA_API int lua_pushthread (lua_State *L) {
 */
 
 //返回值放入l->top-1中
+//t[var]:全局表[var]
 LUA_API void lua_getglobal (lua_State *L, const char *var) {
   Table *reg = hvalue(&G(L)->l_registry);
   const TValue *gt;  /* global table */
@@ -741,8 +746,8 @@ LUA_API void lua_setglobal (lua_State *L, const char *var) {
   const TValue *gt;  /* global table */
   lua_lock(L);
   api_checknelems(L, 1);
-  gt = luaH_getint(reg, LUA_RIDX_GLOBALS);
-  setsvalue2s(L, L->top++, luaS_new(L, var));
+  gt = luaH_getint(reg, LUA_RIDX_GLOBALS);//获得global表
+  setsvalue2s(L, L->top++, luaS_new(L, var));//将strvar赋给top,然后top往上移动
   luaV_settable(L, gt, L->top - 1, L->top - 2);
   L->top -= 2;  /* pop value and key */
   lua_unlock(L);

@@ -464,8 +464,8 @@ const TValue *luaH_getint (Table *t, int key) {
 ** search function for short strings
 */
 const TValue *luaH_getstr (Table *t, TString *key) {
-  Node *n = hashstr(t, key);
-  lua_assert(key->tsv.tt == LUA_TSHRSTR);
+  Node *n = hashstr(t, key);//返回t表中key对应的单向链表头，下面从链表中遍历得到val
+  lua_assert(key->tsv.tt == LUA_TSHRSTR);//本函数只为短字符串服务
   do {  /* check whether `key' is somewhere in the chain */
     if (ttisshrstring(gkey(n)) && eqshrstr(rawtsvalue(gkey(n)), key))
       return gval(n);  /* that's it */
@@ -478,6 +478,7 @@ const TValue *luaH_getstr (Table *t, TString *key) {
 /*
 ** main search function
 */
+//返回t表中key对应的val
 const TValue *luaH_get (Table *t, const TValue *key) {
   switch (ttype(key)) {
     case LUA_TSHRSTR: return luaH_getstr(t, rawtsvalue(key));

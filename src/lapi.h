@@ -17,6 +17,7 @@
 #define adjustresults(L,nres) \
     { if ((nres) == LUA_MULTRET && L->ci->top < L->top) L->ci->top = L->top; }
 
+//对于必包而言它能控制的就是L->ci->func到L->top之间栈数据
 #define api_checknelems(L,n)	api_check(L, (n) < (L->top - L->ci->func), \
 				  "not enough elements in the stack")
 

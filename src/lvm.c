@@ -92,7 +92,7 @@ static void traceexec (lua_State *L) {
 
 static void callTM (lua_State *L, const TValue *f, const TValue *p1,
                     const TValue *p2, TValue *p3, int hasres) {
-  ptrdiff_t result = savestack(L, p3);
+  ptrdiff_t result = savestack(L, p3);//将最后的结果保存在最后的p3里
   setobj2s(L, L->top++, f);  /* push function */
   setobj2s(L, L->top++, p1);  /* 1st argument */
   setobj2s(L, L->top++, p2);  /* 2nd argument */
@@ -107,6 +107,7 @@ static void callTM (lua_State *L, const TValue *f, const TValue *p1,
 }
 
 
+//将t表中key对应的value放入栈中(val)
 void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
   int loop;
   for (loop = 0; loop < MAXTAGLOOP; loop++) {
@@ -119,6 +120,7 @@ void luaV_gettable (lua_State *L, const TValue *t, TValue *key, StkId val) {
         setobj2s(L, val, res);
         return;
       }
+	  //else: 没找到，但该表有元表，则利用元方法来找，下一个loop会跳到ttisfunction分支里
       /* else will try the tag method */
     }
     else if (ttisnil(tm = luaT_gettmbyobj(L, t, TM_INDEX)))
